@@ -6,17 +6,77 @@
 #include <math.h>
 #include <utility>
 
-cv::Mat makeBackgroundBlack(cv::Mat image, cv::Point center, int radius)
+void makeBackgroundBlack(cv::Mat &image, std::pair <cv::Point, int> circle)
 {
-	using Pixel = cv::Vec<uchar, 3>;
+	int rows = image.rows;
+	int cols = image.cols;
 
-	image.forEach<Pixel>([](Pixel &p, const int * position) -> void {
-		p.val[0] = 255 - p.val[0];
-		p.val[1] = 255 - p.val[1];
-		p.val[2] = 255 - p.val[2];
-	});
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j) {
+			if (pow(circle.first.x - j, 2) + pow(circle.first.y - i, 2) > pow(circle.second, 2))
+				image.at<uchar>(i, j) = 0;
+		}
+	}
+}
 
-	return image;
+void cropBlackBars(cv::Mat &image)
+{
+	int xMin = 0;
+	int xMax = image.cols;
+	int yMin = 0;
+	int yMax = image.rows;
+	
+	//cut top
+	for (int i = 0; i < yMax; ++i) {
+		for (int j = 0; j < xMax; ++j) {
+			if (image.at<uchar>(i, j) != 0)
+			{
+				yMin = i;
+				break;
+			}
+		}
+		if (yMin != 0) break;
+	}
+
+	//cut bottom
+	for (int i = yMax-1; i > -1; --i) {
+		for (int j = 0; j < xMax; ++j) {
+			if (image.at<uchar>(i, j) != 0)
+			{
+				yMax = i;
+				break;
+			}
+		}
+		if (yMax != image.rows) break;
+	}
+
+	//cut left
+	for (int i = 0; i < xMax; ++i) {
+		for (int j = 0; j < yMax; ++j) {
+			if (image.at<uchar>(j,i) != 0)
+			{
+				xMin = i;
+				break;
+			}
+		}
+		if (xMin != 0) break;
+	}
+
+	//cut rigth
+	for (int i = xMax-1; i > -1; --i) {
+		for (int j = yMin; j < yMax; ++j) {
+			if (image.at<uchar>(j, i) != 0)
+			{
+				xMax = i;
+				break;
+			}
+		}
+		if (xMax != image.cols) break;
+	}
+
+	cv::Rect myROI(xMin, yMin, xMax-xMin, yMax-yMin);
+
+	image = image(myROI);
 }
 
 cv::Mat imagePreprocessing(cv::Mat image)
@@ -33,13 +93,11 @@ cv::Mat imagePreprocessing(cv::Mat image)
 	return result;
 }
 
-cv::Mat scaleImage(cv::Mat image, int pixels)
+/// scaling image to have input pixels vertically
+void scaleImage(cv::Mat &image, int pixels)
 {
-	//scaling image to have input pixels vertically
 	double scale = (double)pixels / (double)image.rows;
 	cv::resize(image, image, cv::Size(0, 0), scale, scale);
-
-	return image;
 }
 
 std::pair <cv::Point, int> getCircle(cv::Mat image)
@@ -61,28 +119,29 @@ std::pair <cv::Point, int> getCircle(cv::Mat image)
 	return result;
 }
 
-cv::Mat drawCircle(cv::Mat image, std::pair <cv::Point, int> circle)
+void drawCircle(cv::Mat &image, std::pair <cv::Point, int> circle)
 {
 	// draw the circle center
 	cv::circle(image, circle.first, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
 	// draw the circle outline
 	cv::circle(image, circle.first, circle.second, cv::Scalar(0, 0, 255), 3, 8, 0);
-
-	return image;
 }
 
 int main(int argc, char** argv)
 {
 	cv::Mat img = cv::imread("zegar1.jpg", CV_LOAD_IMAGE_COLOR);
 
-	img = scaleImage(img, 800);
+	scaleImage(img, 800);
 
 	cv::Mat gray = imagePreprocessing(img);	
 
 	std::pair <cv::Point, int> circle = getCircle(gray);
-	img = drawCircle(img, circle);
+	drawCircle(img, circle);
 
-	//making backgroud black
+	makeBackgroundBlack(gray, circle);
+
+	cropBlackBars(gray);
+	scaleImage(gray, 400);
 
 	//showing results
 	cv::imshow("circles", img);
