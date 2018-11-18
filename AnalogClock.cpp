@@ -129,11 +129,12 @@ void drawCircle(cv::Mat &image, std::pair <cv::Point, int> circle)
 
 int main(int argc, char** argv)
 {
-	cv::Mat img = cv::imread("zegar1.jpg", CV_LOAD_IMAGE_COLOR);
+	cv::Mat img = cv::imread("zegar3.jpg", CV_LOAD_IMAGE_COLOR);
 
 	scaleImage(img, 800);
 
 	cv::Mat gray = imagePreprocessing(img);	
+	
 
 	std::pair <cv::Point, int> circle = getCircle(gray);
 	drawCircle(img, circle);
@@ -143,8 +144,21 @@ int main(int argc, char** argv)
 	cropBlackBars(gray);
 	scaleImage(gray, 400);
 
-	//showing results
-	cv::imshow("circles", img);
+	//finding hands of a clock
+	Canny(gray, gray, 50, 200);
+	gray.convertTo(gray, CV_8U);
+
+	cv::Mat hands;
+
+	// Standard Hough Line Transform
+	std::vector<cv::Vec4i> lines; // will hold the results of the detection
+	cv::HoughLinesP(gray, lines, 1, CV_PI / 180, 30, 75, 5);
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		cv::Vec4i l = lines[i];
+		cv::line(gray, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), 150, 3, CV_AA);
+	}
+
 	cv::imshow("gray", gray);
 	cv::waitKey(0);
 	return 0;
