@@ -28,16 +28,18 @@ enum {
 	EVENT_MOUSEHWHEEL = 11
 };
 
-int mx, my;
 
-#pragma region doWszystkich
-
-cv::Mat image, Px, Py, Sx, Sy;
 
 static void on_trackbar(int, void*)
 {
 
 }
+
+#pragma region doWszystkichStare
+
+cv::Mat image, Px, Py, Sx, Sy;
+
+int mx, my;
 
 static void onMouse(int event, int x, int y, int, void*)
 {
@@ -874,6 +876,7 @@ void lab7zad1(bool perspective)
 		std::vector<cv::Point2f> cornersIn
 			= { corners[0] , corners[7] ,corners[32] };
 
+
 		std::vector<cv::Point2f> cornersOut
 			= { cv::Point2f(100,100), cv::Point2f(240,100) , cv::Point2f(100,180) };
 
@@ -892,8 +895,85 @@ void lab7zad2()
 
 #pragma endregion
 
+#pragma region lab8 - detekcja ruchu
+
+const int trackbar_max = 255;
+int trackbar_value = 0;
+
+void backroundUpdate(cv::Mat &background, cv::Mat current)
+{
+	cv::Mat diff;
+	cv::compare(background, current, diff, cv::CMP_GT);
+	cv::imshow("img", diff);
+	cv::waitKey();
+}
+
+int lab8zad1()
+{
+	cv::Mat background, current, foreground, image;
+
+	cv::namedWindow("image");	
+	cv::createTrackbar("trackbar", "image", &trackbar_value, trackbar_max, on_trackbar);
+	on_trackbar(trackbar_value, 0);
+
+	cv::VideoCapture cap(0); // open the default camera
+	if (!cap.isOpened()) // check if we succeeded
+		return -1;
+
+	while (true)
+	{
+		char key = cv::waitKey(100);
+
+		if (key == 'a')
+		{
+			cap >> background; // get a new frame from camera
+			cv::cvtColor(background, background, cv::COLOR_RGB2GRAY);
+		}
+
+		if (!background.empty()) 
+		{
+			cap >> current; // get a new frame from camera
+			cv::cvtColor(current, current, cv::COLOR_RGB2GRAY);
+
+			cv::absdiff(background, current, foreground);		
+			cv::threshold(foreground, foreground, trackbar_value, 255, cv::THRESH_BINARY);
+			cv::dilate(foreground, foreground, cv::Mat(), cv::Point(-1, -1), 3);
+			cv::erode(foreground, foreground, cv::Mat(), cv::Point(-1, -1), 3);
+			
+
+			cv::hconcat(background, current, image);
+			cv::hconcat(image, foreground, image);
+
+			cv::imshow("image", image);
+		}		
+	}
+}
+
+int lab8zad2()
+{
+	cv::Mat background, current, foreground, image;
+
+	cv::VideoCapture cap(0); // open the default camera
+	if (!cap.isOpened()) // check if we succeeded
+		return -1;
+	
+	cap >> background; // get a new frame from camera
+	cv::cvtColor(background, background, cv::COLOR_RGB2GRAY);
+
+	while (true)
+	{
+		cap >> current;
+		cv::cvtColor(current, current, cv::COLOR_RGB2GRAY);
+			
+		backroundUpdate(background, current);		
+	}
+	
+}
+
+#pragma endregion
+
 int main(int, char**) 
 {	
-	lab7zad1(true);	
+	lab8zad2();
 	return 0;
 }
