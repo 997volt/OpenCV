@@ -146,21 +146,31 @@ void findClockHands(cv::Mat &image)
 
 int main(int argc, char** argv)
 {
-	cv::Mat img = cv::imread("zegar1.jpg", CV_LOAD_IMAGE_COLOR);
+	cv::Mat img = cv::imread("zegar3.jpg", CV_LOAD_IMAGE_COLOR);
 	scaleImage(img, 800);
+	cv::imshow("1", img);
 
 	cv::Mat gray = imagePreprocessing(img);		
+	cv::imshow("2", gray);
 
 	std::pair <cv::Point, int> circle = getCircle(gray);
 	drawCircle(img, circle);
+	cv::imshow("3", img);
+
+	cv::Mat polar;
+	cv::warpPolar(gray, polar, cv::Size(1000,1000), circle.first, 1000, cv::WARP_POLAR_LINEAR);
+	cv::imshow("polar", polar);
 
 	makeBackgroundBlack(gray, circle);
+	cv::imshow("4", gray);
 	cropBlackBars(gray);
 	scaleImage(gray, 400);
-
+	cv::imshow("5", gray);
+	
 	findClockHands(gray);
+	cv::imshow("6", gray);
 
-	cv::imshow("gray", gray);
+	//cv::imshow("gray", gray);
 	cv::waitKey(0);
 	return 0;
 }
