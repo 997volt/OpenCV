@@ -842,7 +842,7 @@ void lab6zad1()
 
 #pragma endregion
 
-#pragma region lab7
+#pragma region lab7 - przekształcenia perspektywiczne
 
 void lab7zad1(bool perspective)
 {
@@ -904,7 +904,9 @@ void backroundUpdate(cv::Mat &background, cv::Mat current)
 {
 	cv::Mat diff;
 	cv::compare(background, current, diff, cv::CMP_GT);
-	cv::imshow("img", diff);
+
+	background = background + (diff / 255);
+	cv::imshow("img", background);
 	cv::waitKey();
 }
 
@@ -966,14 +968,67 @@ int lab8zad2()
 		cv::cvtColor(current, current, cv::COLOR_RGB2GRAY);
 			
 		backroundUpdate(background, current);		
-	}
+	}	
+}
+
+#pragma endregion
+
+#pragma region lab9 - wykrywanie kształtów
+
+
+void lab9zad1()
+{
+	cv::Mat image_org = cv::imread("testImage.jpg", CV_LOAD_IMAGE_GRAYSCALE);
+	std::vector<std::vector<cv::Point> > contours;
+
+	cv::threshold(image_org, image, 50, 255, cv::THRESH_BINARY);
+	cv::erode(image, image, cv::Mat(), cv::Point(-1, -1), 3);
+	cv::dilate(image, image, cv::Mat(), cv::Point(-1, -1), 5);
 	
+	///kontury
+	cv::findContours(image, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+	
+	std::vector<cv::Moments> mu(contours.size());
+	for (int i = 0; i < contours.size(); i++)
+	{
+		mu[i] = moments(contours[i], false);
+	}
+
+	std::vector<cv::Point2f> mc(contours.size());
+	for (int i = 0; i < contours.size(); i++)
+	{
+		mc[i] = cv::Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
+	}
+
+	///rysowanie
+	cv::Mat drawing = cv::Mat::zeros(image.size(), CV_8UC3);
+	for (int i = 1; i < contours.size(); i++)
+	{
+		cv::Scalar color = cv::Scalar((50 + 80 * i )% 255, (110 + 20 * i) % 255, (200 + 222 * i) % 255);
+		drawContours(drawing, contours, i, color, CV_FILLED);
+		circle(drawing, mc[i], 4, cv::Scalar(255, 255, 255), -1, 8, 0);
+	}
+
+	///przekształcenie perspektywiczne
+	std::vector<cv::Point2f> cornersIn
+		= { mc[1] , mc[2] ,mc[3] ,mc[4] };
+
+	std::vector<cv::Point2f> cornersOut
+		= { cv::Point2f(100,100), cv::Point2f(700,100) ,
+			cv::Point2f(100,500), cv::Point2f(700,500) };
+
+	cv::Mat perspectiveMat = cv::getPerspectiveTransform(cornersIn, cornersOut);
+	cv::warpPerspective(image_org, image_org, perspectiveMat, cv::Size(800, 600));
+
+	cv::namedWindow("obraz", cv::WINDOW_NORMAL);
+	cv::imshow("obraz", image_org);
+	cv::waitKey();
 }
 
 #pragma endregion
 
 int main(int, char**) 
 {	
-	lab8zad2();
+	lab9zad1();
 	return 0;
 }
